@@ -40,4 +40,4 @@ Para publicar cambios:
 
 - Repositorio **privado**: solo lo ven las personas añadidas como colaboradoras en *Settings → Collaborators and teams*.
 - Identidad visual de Cloud District (Purple Black `#090017`, Lima `#AFFC41`, tipografía Poppins) aplicada según el brandbook 2025 y la skill de identidad de marca.
-- Cualquier duda o petición de cambio, contacta con [tu nombre / equipo de People].
+- Cualquier duda o petición de cambio, contacta con tu manager o con People.
