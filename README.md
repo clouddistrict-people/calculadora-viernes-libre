@@ -2,7 +2,7 @@
 
 Herramienta interna de Cloud District para estimar cuántos **viernes libres** corresponden a una nueva incorporación según su fecha de alta, dentro del beneficio de reducción de jornada de la empresa.
 
-🔗 **Sitio publicado:** `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/` *(actualiza este enlace cuando lo tengas)*
+🔗 **Sitio publicado:** https://clouddistrict-people.github.io/calculadora-viernes-libre/
 
 ## Qué hace
 
