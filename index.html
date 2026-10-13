@@ -438,6 +438,14 @@
   }
   .abs-add:hover{ background:var(--lime-dim); border-color:var(--lime); }
 
+  /* Jornada */
+  .seg{ display:flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; margin-bottom:14px; }
+  .seg button{ flex:1; font-family:'Poppins', sans-serif; font-weight:600; font-size:12.5px; color:var(--ink-soft); background:var(--bg); border:none; padding:9px 10px; cursor:pointer; border-right:1px solid var(--line); }
+  .seg button:last-child{ border-right:none; }
+  .seg button.active{ background:var(--lime); color:var(--bg); }
+  .seg button:hover:not(.active){ color:var(--ink); }
+  .pct-readout{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--lime); margin:-4px 0 12px; }
+
   footer.credit{
     margin-top:36px; text-align:center;
     font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft);
@@ -576,6 +584,28 @@
           </div>
           <p class="sub" style="margin-top:-8px;">Precepto: todo el mundo tiene 15 viernes libres si trabaja el año completo. Este dato se recalcula solo, para el año que corresponda, según cómo caigan los festivos y el periodo de verano — no hace falta tocarlo.</p>
         </details>
+      </div>
+
+      <div class="panel">
+        <h2>Jornada</h2>
+        <p class="sub">La referencia de jornada completa son 40 h semanales. La jornada reducida es constante todo el año (sin jornada de verano) y mantiene el mismo número de viernes que la completa; aquí se traducen a horas según su jornada.</p>
+        <div class="seg" id="jornadaSeg">
+          <button type="button" data-j="completa" class="active">Completa</button>
+          <button type="button" data-j="parcial">Parcial</button>
+        </div>
+        <div id="parcialBox" style="display:none;">
+          <div class="row2">
+            <div class="field">
+              <label for="horasSemanales">Horas semanales</label>
+              <input type="number" id="horasSemanales" value="32" min="1" max="40" step="0.5">
+            </div>
+            <div class="field">
+              <label for="diasSemana">Días por semana</label>
+              <input type="number" id="diasSemana" value="5" min="1" max="5" step="1">
+            </div>
+          </div>
+          <div class="pct-readout" id="parcialPct"></div>
+        </div>
       </div>
 
       <div class="panel">
@@ -755,6 +785,7 @@ function applyFestivosForYear(year){
 }
 
 let ausencias = [];
+let jornadaTipo = 'completa';
 
 const TIPOS_AUSENCIA = [
   'Baja médica (IT)',
@@ -808,6 +839,15 @@ function renderAusencias(){
 document.getElementById('absAddBtn').addEventListener('click', ()=>{
   ausencias.push({tipo:TIPOS_AUSENCIA[0], desde:'', hasta:'', cuenta:false});
   renderAusencias();
+});
+
+document.querySelectorAll('#jornadaSeg button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    jornadaTipo = btn.dataset.j;
+    document.querySelectorAll('#jornadaSeg button').forEach(b=> b.classList.toggle('active', b===btn));
+    document.getElementById('parcialBox').style.display = jornadaTipo==='parcial' ? 'block' : 'none';
+    compute();
+  });
 });
 
 function buildYearToggle(){
@@ -970,6 +1010,24 @@ function compute(){
   const viernesRounded = Math.max(0, Math.ceil(preciseRound(viernesRaw,1) - 0.5)); // x,5 → baja; x,6 → sube
 
   document.getElementById('resultFridays').textContent = fmtNum(viernesRounded,0);
+  let parcialHtml = '', parcialRows = [];
+  if(jornadaTipo === 'parcial'){
+    const H = Math.min(40, Math.max(0, Number(document.getElementById('horasSemanales').value)||0));
+    const dias = Math.min(5, Math.max(1, Math.round(Number(document.getElementById('diasSemana').value)||5)));
+    document.getElementById('parcialPct').textContent = `${fmtNum(H/40*100,1)}% de la jornada de 40 h`;
+    if(H > 0){
+      const hViernes = H/5;
+      const horasLibres = viernesRounded * hViernes;
+      parcialHtml = `<br>= <b>${fmtNum(horasLibres,1)} h</b> libres (viernes de ${fmtNum(hViernes,1)} h)`;
+      parcialRows.push(['sub', `Jornada parcial: ${fmtNum(H,1)} h/semana en ${dias} días · viernes de ${fmtNum(hViernes,1)} h`, '']);
+      if(dias < 5){
+        const jornadasEq = horasLibres / (H/dias);
+        parcialHtml += `<br>≈ ${fmtNum(jornadasEq,1)} jornadas de ${fmtNum(H/dias,1)} h`;
+        parcialRows.push(['sub', `Equivale a ${fmtNum(jornadasEq,1)} jornadas de ${fmtNum(H/dias,1)} h`, '']);
+      }
+      parcialRows.push(['total', `Horas libres (${fmtNum(viernesRounded,0)} viernes × ${fmtNum(hViernes,1)} h)`, fmtNum(horasLibres,1)+' h']);
+    }
+  }
   let saldoHtml = '';
   const disfrutadosRaw = document.getElementById('viernesDisfrutados').value;
   if(disfrutadosRaw !== ''){
@@ -978,7 +1036,7 @@ function compute(){
     saldoHtml = `<br>disfrutados: <b>${fmtNum(disfrutados,0)}</b> · saldo: <b>${fmtNum(saldo,0)}</b>` +
       (saldo < 0 ? '<br>saldo negativo: lo asume la empresa, no se regulariza' : '');
   }
-  document.getElementById('resultRaw').innerHTML = `cálculo exacto: <b>${fmtNum(viernesRaw,1)}</b> viernes<br>(${fmtNum(horasExcedente,1)} h de exceso ÷ ${fmtNum(params.hVie,2)} h)` + saldoHtml;
+  document.getElementById('resultRaw').innerHTML = `cálculo exacto: <b>${fmtNum(viernesRaw,1)}</b> viernes<br>(${fmtNum(horasExcedente,1)} h de exceso ÷ ${fmtNum(params.hVie,2)} h)` + parcialHtml + saldoHtml;
 
   const warnBox = document.getElementById('warnBox');
   if(viernesRaw < 0){
@@ -999,6 +1057,7 @@ function compute(){
     ['op',`SAH netas objetivo (semanas × ${fmtNum(objetivo,2)} h calibradas)`, fmtNum(sahNetasObjetivo,1)+' h'],
     ['sub',`${fmtNum(diasNetos,1)} días netos ÷ 5 = ${fmtNum(semanasNetas,2)} semanas × ${fmtNum(objetivo,2)} h`, ''],
     ['total','Horas de exceso a convertir en viernes', fmtNum(horasExcedente,1)+' h'],
+    ...parcialRows,
   ];
   const ledger = document.getElementById('ledger');
   ledger.innerHTML = rows.map(r=> `<tr class="${r[0]}"><td class="label">${r[1]}</td><td class="val">${r[2]}</td></tr>`).join('');
