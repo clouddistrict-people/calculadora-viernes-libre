@@ -967,15 +967,15 @@ function compute(){
 
   const horasExcedente = sahBrutasHoras - horasVacaciones - horasCumple - horasExtra - sahNetasObjetivo;
   const viernesRaw = params.hVie>0 ? horasExcedente/params.hVie : 0;
-  const viernesRounded = Math.max(0, Math.round(viernesRaw*2)/2);
+  const viernesRounded = Math.max(0, Math.ceil(preciseRound(viernesRaw,1) - 0.5)); // x,5 → baja; x,6 → sube
 
-  document.getElementById('resultFridays').textContent = fmtNum(viernesRounded,1).replace(/,0$/,'');
+  document.getElementById('resultFridays').textContent = fmtNum(viernesRounded,0);
   let saldoHtml = '';
   const disfrutadosRaw = document.getElementById('viernesDisfrutados').value;
   if(disfrutadosRaw !== ''){
     const disfrutados = Number(disfrutadosRaw)||0;
     const saldo = viernesRounded - disfrutados;
-    saldoHtml = `<br>disfrutados: <b>${fmtNum(disfrutados,0)}</b> · saldo: <b>${fmtNum(saldo,1)}</b>` +
+    saldoHtml = `<br>disfrutados: <b>${fmtNum(disfrutados,0)}</b> · saldo: <b>${fmtNum(saldo,0)}</b>` +
       (saldo < 0 ? '<br>saldo negativo: lo asume la empresa, no se regulariza' : '');
   }
   document.getElementById('resultRaw').innerHTML = `cálculo exacto: <b>${fmtNum(viernesRaw,1)}</b> viernes<br>(${fmtNum(horasExcedente,1)} h de exceso ÷ ${fmtNum(params.hVie,2)} h)` + saldoHtml;
