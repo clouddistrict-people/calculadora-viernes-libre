@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, nofollow">
 <title>Calculadora de viernes libres</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='3' fill='%23AFFC41'/%3E%3C/svg%3E">
 <style>
@@ -386,6 +385,7 @@
   .cal-day.holiday{ background:var(--support-dim); color:var(--support); font-weight:600; }
   .cal-day.summer{ background:var(--lime-dim); color:var(--lime); }
   .cal-day.before{ opacity:0.25; }
+  .cal-day.absent{ background:rgba(127,119,144,.30); color:var(--ink); text-decoration:line-through; }
   .cal-day.incorp{
     outline:1.5px solid var(--lime);
     outline-offset:-1.5px;
@@ -407,6 +407,36 @@
   .legend .sw.summer{ background:var(--lime-dim); border:1px solid #4A5A19;}
   .legend .sw.holiday{ background:var(--support-dim); border:1px solid var(--support-line);}
   .legend .sw.incorp{ border:1.5px solid var(--lime); background:transparent;}
+  .legend .sw.absent{ background:rgba(127,119,144,.30); border:1px solid var(--ink-faint);}
+
+  /* Ausencias */
+  .abs-row{
+    border:1px solid var(--line); border-radius:6px; background:var(--bg);
+    padding:10px; margin-bottom:10px;
+  }
+  .abs-row .abs-top{ display:flex; gap:8px; margin-bottom:8px; }
+  .abs-row select{
+    flex:1; min-width:0;
+    font-family:'Poppins', sans-serif; font-size:12.5px;
+    padding:8px 9px; border:1px solid var(--line); border-radius:5px;
+    background:var(--bg-raised); color:var(--ink); color-scheme:dark;
+  }
+  .abs-row .abs-rm{
+    border:none; background:none; cursor:pointer;
+    color:var(--support); font-size:18px; line-height:1; padding:0 6px;
+  }
+  .abs-row .abs-rm:hover{ background:var(--support-dim); border-radius:3px; }
+  .abs-row .abs-count{
+    display:flex; align-items:center; gap:8px; margin-top:8px;
+    font-family:'Poppins', sans-serif; font-size:12px; color:var(--ink-soft); font-weight:400;
+  }
+  .abs-row .abs-count input{ width:15px; height:15px; accent-color:var(--lime); }
+  .abs-add{
+    width:100%; background:transparent; color:var(--lime);
+    border:1px solid var(--lime-dim); border-radius:5px; padding:9px 10px;
+    font-family:'Poppins', sans-serif; font-weight:600; font-size:12.5px; cursor:pointer;
+  }
+  .abs-add:hover{ background:var(--lime-dim); border-color:var(--lime); }
 
   footer.credit{
     margin-top:36px; text-align:center;
@@ -549,6 +579,18 @@
       </div>
 
       <div class="panel">
+        <h2>Ausencias</h2>
+        <p class="sub">Bajas médicas, nacimiento y cuidado del menor u otras ausencias largas. Los días de ausencia no generan viernes. Si la baja sigue abierta, deja la fecha de fin vacía (cuenta hasta el 31 de dic.) y actualízala al alta. Las vacaciones de arriba son las que se disfrutan en el periodo trabajado.</p>
+        <div id="absList"></div>
+        <button type="button" class="abs-add" id="absAddBtn">+ Añadir ausencia</button>
+        <div class="field" style="margin-top:16px;">
+          <label for="viernesDisfrutados">Viernes ya disfrutados este año (opcional)</label>
+          <input type="number" id="viernesDisfrutados" min="0" step="1" placeholder="—">
+        </div>
+        <p class="sub" style="margin-top:-8px;">Cumpleaños y día extra se descuentan siempre, aunque caigan durante la ausencia.</p>
+      </div>
+
+      <div class="panel">
         <h2>Festivos <span class="prov-tag" id="provTag" style="display:none;">provisional</span></h2>
         <p class="sub" id="holSub">14 festivos de Madrid capital 2026 (nacionales + CAM + locales). Añade, edita o borra los que necesites.</p>
         <div class="hol-list" id="holList"></div>
@@ -580,6 +622,7 @@
           <span><span class="sw incorp"></span>Fecha de incorporación</span>
           <span><span class="sw summer"></span>Jornada de verano</span>
           <span><span class="sw holiday"></span>Festivo</span>
+          <span><span class="sw absent"></span>Ausencia</span>
           <span>· media jornada</span>
         </div>
       </div>
@@ -711,6 +754,62 @@ function applyFestivosForYear(year){
   renderHolidays();
 }
 
+let ausencias = [];
+
+const TIPOS_AUSENCIA = [
+  'Baja médica (IT)',
+  'Nacimiento y cuidado del menor',
+  'Otra ausencia'
+];
+
+function renderAusencias(){
+  const list = document.getElementById('absList');
+  list.innerHTML = '';
+  ausencias.forEach((a, i)=>{
+    const row = document.createElement('div');
+    row.className = 'abs-row';
+    row.innerHTML = `
+      <div class="abs-top">
+        <select data-i="${i}" data-k="tipo">
+          ${TIPOS_AUSENCIA.map(t=> `<option${t===a.tipo?' selected':''}>${t}</option>`).join('')}
+        </select>
+        <button type="button" class="abs-rm" data-i="${i}" title="Quitar ausencia">×</button>
+      </div>
+      <div class="row2">
+        <input type="date" data-i="${i}" data-k="desde" value="${a.desde}" aria-label="Desde">
+        <input type="date" data-i="${i}" data-k="hasta" value="${a.hasta}" aria-label="Hasta">
+      </div>
+      <label class="abs-count" style="text-transform:none; letter-spacing:0; margin-bottom:0;">
+        <input type="checkbox" data-i="${i}" data-k="cuenta"${a.cuenta?' checked':''}>
+        Cuenta como tiempo trabajado (no resta)
+      </label>`;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('[data-k]').forEach(el=>{
+    const handler = ()=>{
+      const a = ausencias[Number(el.dataset.i)];
+      const k = el.dataset.k;
+      a[k] = (k==='cuenta') ? el.checked : el.value;
+      compute();
+    };
+    el.addEventListener('input', handler);
+    el.addEventListener('change', handler);
+  });
+  list.querySelectorAll('.abs-rm').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      ausencias.splice(Number(btn.dataset.i), 1);
+      renderAusencias();
+      compute();
+    });
+  });
+}
+
+document.getElementById('absAddBtn').addEventListener('click', ()=>{
+  ausencias.push({tipo:TIPOS_AUSENCIA[0], desde:'', hasta:'', cuenta:false});
+  renderAusencias();
+});
+
 function buildYearToggle(){
   const box = document.getElementById('yearToggle');
   const nowYear = new Date().getFullYear();
@@ -781,7 +880,13 @@ document.getElementById('holAddBtn').addEventListener('click', ()=>{
 function isHoliday(iso){ return festivos.some(f=>f.d===iso); }
 function withinSummer(iso, sIni, sFin){ return iso >= sIni && iso <= sFin; }
 
-function buildYearSchedule(year, params){
+// Ausencias: [{tipo, desde, hasta, cuenta}] — 'hasta' vacío = hasta fin de año.
+// Si 'cuenta' es true la ausencia se trata como tiempo trabajado (no resta nada).
+function ausenciaCubre(iso, ausencias){
+  return ausencias.some(a => a.desde && !a.cuenta && iso >= a.desde && (!a.hasta || iso <= a.hasta));
+}
+
+function buildYearSchedule(year, params, ausencias = []){
   const days = [];
   const start = new Date(year,0,1);
   const end = new Date(year,11,31);
@@ -799,7 +904,13 @@ function buildYearSchedule(year, params){
         hours = hours/2; half = true;
       }
     }
-    days.push({iso, dow, hours, half});
+    let absent = false, absentDay = false;
+    if(ausencias.length && ausenciaCubre(iso, ausencias)){
+      absent = true;
+      absentDay = hours !== null;   // era un día laborable que se pierde
+      hours = null;
+    }
+    days.push({iso, dow, hours, half, absent, absentDay});
   }
   return days;
 }
@@ -839,11 +950,12 @@ function compute(){
   const objetivo = calibrateObjetivo(year, params, viernesObjetivoAnual);
   document.getElementById('objetivoDisplay').value = `${fmtNum(objetivo,2)} h/semana (${year})`;
 
-  const schedule = buildYearSchedule(year, params);
+  const schedule = buildYearSchedule(year, params, ausencias);
   const periodo = schedule.filter(d => d.iso >= fechaInc);
 
   const sahBrutasHoras = periodo.reduce((acc,d)=> acc + (d.hours||0), 0);
   const diasHabiles = periodo.filter(d=> d.hours!==null).length;
+  const diasAusencia = periodo.filter(d=> d.absentDay).length;
 
   const horasVacaciones = vacDias*8;
   const horasExtra = diaExtraDias*8;
@@ -858,7 +970,15 @@ function compute(){
   const viernesRounded = Math.max(0, Math.round(viernesRaw*2)/2);
 
   document.getElementById('resultFridays').textContent = fmtNum(viernesRounded,1).replace(/,0$/,'');
-  document.getElementById('resultRaw').innerHTML = `cálculo exacto: <b>${fmtNum(viernesRaw,1)}</b> viernes<br>(${fmtNum(horasExcedente,1)} h de exceso ÷ ${fmtNum(params.hVie,2)} h)`;
+  let saldoHtml = '';
+  const disfrutadosRaw = document.getElementById('viernesDisfrutados').value;
+  if(disfrutadosRaw !== ''){
+    const disfrutados = Number(disfrutadosRaw)||0;
+    const saldo = viernesRounded - disfrutados;
+    saldoHtml = `<br>disfrutados: <b>${fmtNum(disfrutados,0)}</b> · saldo: <b>${fmtNum(saldo,1)}</b>` +
+      (saldo < 0 ? '<br>saldo negativo: lo asume la empresa, no se regulariza' : '');
+  }
+  document.getElementById('resultRaw').innerHTML = `cálculo exacto: <b>${fmtNum(viernesRaw,1)}</b> viernes<br>(${fmtNum(horasExcedente,1)} h de exceso ÷ ${fmtNum(params.hVie,2)} h)` + saldoHtml;
 
   const warnBox = document.getElementById('warnBox');
   if(viernesRaw < 0){
@@ -871,6 +991,7 @@ function compute(){
   const rows = [
     ['add','SAH brutas (horas de calendario desde la incorporación)', fmtNum(sahBrutasHoras,1)+' h'],
     ['sub',`${diasHabiles} días hábiles en el periodo`, ''],
+    ...(diasAusencia > 0 ? [['sub',`${diasAusencia} días laborables de ausencia excluidos del periodo`, '']] : []),
     ['op','Vacaciones proporcionales', fmtNum(horasVacaciones,1)+' h'],
     ['sub',`${fmtNum(vacDias,0)} días`, ''],
     ['op','Día extra empresa', fmtNum(horasExtra,1)+' h'],
@@ -922,9 +1043,10 @@ function renderCalendar(schedule, fechaInc, year){
       if(d.iso < fechaInc) cls+=' before';
       if(d.iso === fechaInc) cls+=' incorp';
       if(d.half) cls+=' halfday';
+      if(d.absentDay) cls+=' absent';
       cell.className=cls;
       cell.textContent = parseISO(d.iso).getDate();
-      cell.title = d.iso + (isHoliday(d.iso) ? ' — festivo' : '') + (d.hours!==null ? ` — ${d.hours}h` : ' — no laborable') + ' · clic para fijar como fecha de incorporación';
+      cell.title = d.iso + (isHoliday(d.iso) ? ' — festivo' : '') + (d.absentDay ? ' — ausencia' : (d.hours!==null ? ` — ${d.hours}h` : ' — no laborable')) + ' · clic para fijar como fecha de incorporación';
       cell.addEventListener('click', ()=>{
         document.getElementById('fechaIncorporacion').value = d.iso;
         compute();
