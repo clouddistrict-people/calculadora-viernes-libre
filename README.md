@@ -1,31 +1,31 @@
 # Calculadora de viernes libres
 
-Herramienta interna de Cloud District para estimar cuántos **viernes libres** corresponden a una nueva incorporación según su fecha de alta, dentro del beneficio de reducción de jornada de la empresa.
+Herramienta interna de Cloud District para estimar cuántos **viernes libres** corresponden a una persona en el año según su fecha de incorporación, sus ausencias y su jornada, dentro del beneficio de reducción de jornada de la empresa.
 
 🔗 **Sitio publicado:** https://clouddistrict-people.github.io/calculadora-viernes-libre/
 
-## Qué hace
+## Cómo se calcula
 
-A partir de la fecha de incorporación de una persona, calcula:
+Prorrata por días laborables:
 
-- las **SAH brutas** (horas de calendario) desde esa fecha hasta el 31 de diciembre del mismo año,
-- descontando vacaciones proporcionales, día extra de empresa y día de cumpleaños,
-- comparándolas con la **SAH objetivo** (calibrada automáticamente para que un año completo dé siempre **15 viernes libres**, el precepto fijo de la empresa),
-- y convierte el excedente de horas en el número de viernes libres correspondiente.
+> viernes = viernes de un año completo × días laborables trabajados ÷ días laborables del año
 
-Tiene en cuenta:
-- **Jornada normal:** 8,5h de lunes a jueves, 6,5h los viernes.
-- **Jornada intensiva de verano:** 7,5h de lunes a viernes, siempre del 15 de junio al 15 de septiembre (fijo, no se mueve con el calendario).
-- **24 y 31 de diciembre:** media jornada.
-- **Festivos:** precargados para Madrid capital; para 2026 son los oficiales (BOCM), para el resto de años se autogeneran (incluida la Semana Santa, calculada con el algoritmo de Gauss) y se marcan como "provisional" hasta que haya decreto oficial. Editables a mano en cualquier momento.
+- **Un año completo son 15 viernes libres** (editable en la herramienta).
+- **Días laborables:** de lunes a viernes, sin festivos.
+- **Incorporación a mitad de año:** no cuentan los días anteriores al alta; el cálculo llega hasta el 31 de diciembre.
+- **Bajas y otras ausencias** (baja médica, nacimiento y cuidado del menor, etc.): cada día laborable de ausencia resta lo mismo, sea cual sea la época del año. Cada ausencia tiene un interruptor «cuenta como tiempo trabajado» para las que no deban restar. Si la baja sigue abierta, se deja sin fecha de fin (cuenta hasta el 31 de diciembre) y se actualiza al alta.
+- **Redondeo:** a días enteros; hasta x,5 se redondea hacia abajo y desde x,6 hacia arriba.
+- **Jornada parcial:** mismo número de viernes que con jornada completa. La herramienta los traduce a horas según las horas semanales (referencia de jornada completa: 40 h): cada viernes vale horas semanales ÷ 5. Si la persona no trabaja los viernes, muestra también el equivalente en jornadas.
+- **Saldo:** opcionalmente se indican los viernes ya disfrutados; si el saldo sale negativo lo asume la empresa.
+- **Festivos:** precargados para Madrid capital. Los de 2026 son los oficiales (BOCM); para el resto de años se autogeneran (Semana Santa calculada con el algoritmo de Gauss; el 1 de noviembre y el 6 de diciembre pasan al lunes si caen en domingo) y se marcan como «provisional» hasta que haya decreto oficial. Se pueden editar a mano.
 
 ## Cómo usarla
 
-Solo hace falta abrir la URL publicada — no requiere instalación ni backend, todo corre en el navegador:
+Solo hace falta abrir la URL publicada: no requiere instalación ni backend, todo corre en el navegador.
 
-1. Escribe la fecha de incorporación (o haz clic directamente en un día del calendario) — también hay un botón **"Hoy"**.
-2. Introduce los días de vacaciones proporcionales (se copian de Factorial, no se calculan aquí).
-3. El resultado y el desglose del cálculo se actualizan solos.
+1. Escribe la fecha de incorporación, o haz clic en un día del calendario (también hay un botón **Hoy**).
+2. Si procede, añade ausencias y elige la jornada (completa o parcial).
+3. El resultado y el desglose se actualizan solos.
 
 ## Cómo actualizar el sitio
 
@@ -39,5 +39,5 @@ Para publicar cambios:
 ## Notas
 
 - Repositorio **privado**: solo lo ven las personas añadidas como colaboradoras en *Settings → Collaborators and teams*.
-- Identidad visual de Cloud District (Purple Black `#090017`, Lima `#AFFC41`, tipografía Poppins) aplicada según el brandbook 2025 y la skill de identidad de marca.
+- Look & feel de clouddistrict.com: tipografías Archivo, Archivo Black e IBM Plex Mono, y logo y favicon oficiales de la web.
 - Cualquier duda o petición de cambio, contacta con tu manager o con People.
