@@ -549,9 +549,9 @@
 
         <div class="field">
           <label for="vacDias">Días de vacaciones proporcionales</label>
-          <input type="number" id="vacDias" value="22" min="0" step="1">
+          <input type="number" id="vacDias" value="23" min="0" step="1">
         </div>
-        <p class="sub" id="vacHint" style="margin-top:-8px;"></p>
+        <p class="sub" id="vacHint" style="margin-top:-8px;">Empieza en 23 (año completo). Réstale los días que correspondan según la fecha de incorporación.</p>
         <div class="check-field">
           <input type="checkbox" id="diaExtraOn" checked>
           <span class="clabel">Día extra de la empresa</span>
@@ -562,7 +562,7 @@
           <span class="clabel">Día de cumpleaños</span>
           <input type="number" id="cumpleDias" value="1" min="0" step="0.5">
         </div>
-        <p class="sub">Vacaciones, día extra y cumpleaños se descuentan de los días trabajados, siempre completos aunque haya alta tardía o ausencia: viernes = 15 × (días trabajados − vacaciones − extra − cumpleaños) ÷ (días laborables del año − 22 − extra − cumpleaños). Los festivos se configuran más abajo.</p>
+        <p class="sub">Vacaciones, día extra y cumpleaños se descuentan de los días trabajados, siempre completos aunque haya alta tardía o ausencia: viernes = 15 × (días trabajados − vacaciones − extra − cumpleaños) ÷ (días laborables del año − 23 − extra − cumpleaños). Los festivos se configuran más abajo.</p>
       </div>
 
       <div class="panel">
@@ -764,11 +764,6 @@ function applyFestivosForYear(year){
 
 let ausencias = [];
 let jornadaTipo = 'completa';
-let vacManual = false, vacFechaPrev = '';
-document.getElementById('vacDias').addEventListener('input', ()=>{ vacManual = true; });
-document.getElementById('vacHint').addEventListener('click', e=>{
-  if(e.target.id === 'vacAutoBtn'){ vacManual = false; compute(); }
-});
 
 const TIPOS_AUSENCIA = [
   'Baja médica (IT)',
@@ -967,18 +962,8 @@ function compute(){
   const viernesObjetivoAnual = 15;  // precepto de la empresa: 15 viernes libres con año completo
   const diaExtraDias = document.getElementById('diaExtraOn').checked ? (Number(document.getElementById('diaExtraDias').value)||0) : 0;
   const cumpleDias = document.getElementById('cumpleOn').checked ? (Number(document.getElementById('cumpleDias').value)||0) : 0;
-  // Vacaciones proporcionales: 22 días × días naturales restantes ÷ días del año. Se recalculan al cambiar
-  // la fecha; si se editan a mano se respeta el valor hasta que cambie la fecha.
-  const VAC_ANIO = 22;  // días de convenio de un año completo
-  if(fechaInc !== vacFechaPrev){ vacManual = false; vacFechaPrev = fechaInc; }
-  const diasAnioNat = (year%4===0 && (year%100!==0 || year%400===0)) ? 366 : 365;
-  const diasRestantes = Math.round((new Date(year,11,31) - parseISO(fechaInc))/86400000) + 1;
-  const vacAuto = Math.round(VAC_ANIO * diasRestantes / diasAnioNat);
-  if(!vacManual) document.getElementById('vacDias').value = vacAuto;
-  document.getElementById('vacHint').innerHTML = vacManual
-    ? `Manual (automático: ${vacAuto}). <button type="button" class="linkbtn" id="vacAutoBtn">Volver a automático</button>`
-    : `Automático: ${VAC_ANIO} días × ${diasRestantes}/${diasAnioNat} días naturales. Si usas la cifra de Factorial, réstale el día extra.`;
-  const vacDias = Math.round(Number(document.getElementById('vacDias').value)||0);
+  const VAC_ANIO = 23;  // marcador de vacaciones de un año completo; se resta a mano según la incorporación
+  const vacDias = Math.max(0, Math.round(Number(document.getElementById('vacDias').value)||0));
   const diasFijos = diaExtraDias + cumpleDias;  // se descuentan siempre completos
   const fd = x => fmtNum(x, Number.isInteger(x) ? 0 : 1);
   const vObj = fmtNum(viernesObjetivoAnual, Number.isInteger(viernesObjetivoAnual) ? 0 : 1);
