@@ -546,63 +546,10 @@
         </div>
 
         <div class="field">
-          <label for="vacDias">Días de vacaciones proporcionales</label>
-          <input type="number" id="vacDias" value="22" min="0" step="1">
+          <label for="viernesObjetivoAnual">Viernes libres de un año completo</label>
+          <input type="number" id="viernesObjetivoAnual" value="15" min="0" step="1">
         </div>
-        <p class="sub" id="vacHint" style="margin-top:-8px;"></p>
-
-        <div class="check-field">
-          <input type="checkbox" id="diaExtraOn" checked>
-          <span class="clabel">Día extra de la empresa</span>
-          <input type="number" id="diaExtraDias" value="1" min="0" step="0.5">
-        </div>
-        <div class="check-field">
-          <input type="checkbox" id="cumpleOn" checked>
-          <span class="clabel">Día de cumpleaños</span>
-          <input type="number" id="cumpleDias" value="1" min="0" step="0.5">
-        </div>
-
-        <details>
-          <summary>Parámetros del calendario laboral ▸</summary>
-
-          <div class="field">
-            <label>Horas jornada normal (lun–jue / viernes)</label>
-            <div class="row2">
-              <input type="number" id="hLJ" value="8.5" step="0.25">
-              <input type="number" id="hVie" value="6.5" step="0.25">
-            </div>
-          </div>
-
-          <div class="field">
-            <label>Jornada intensiva de verano (h/día, lun–vie)</label>
-            <input type="number" id="hVerano" value="7.5" step="0.25">
-          </div>
-
-          <div class="field">
-            <label>Periodo de jornada intensiva</label>
-            <div class="row2">
-              <input type="date" id="veranoIni" value="2026-06-15">
-              <input type="date" id="veranoFin" value="2026-09-15">
-            </div>
-          </div>
-          <p class="sub" style="margin-top:-8px;">Fijo del 15 de junio al 15 de septiembre todos los años, hasta nueva orden — no se traslada aunque caiga en fin de semana. Se realinea solo al año que corresponda; edítalo aquí solo si la empresa cambia la política.</p>
-
-          <div class="check-field">
-            <input type="checkbox" id="medioDiaOn" checked>
-            <span class="clabel">24 y 31 dic. a media jornada</span>
-          </div>
-
-          <div class="field">
-            <label for="viernesObjetivoAnual">Viernes libres objetivo (año completo)</label>
-            <input type="number" id="viernesObjetivoAnual" value="15" min="0" step="0.5">
-          </div>
-
-          <div class="field">
-            <label>SAH objetivo (h/semana) — calculada automáticamente</label>
-            <input type="text" id="objetivoDisplay" disabled>
-          </div>
-          <p class="sub" style="margin-top:-8px;">Precepto: todo el mundo tiene 15 viernes libres si trabaja el año completo. Este dato se recalcula solo, para el año que corresponda, según cómo caigan los festivos y el periodo de verano — no hace falta tocarlo.</p>
-        </details>
+        <p class="sub" style="margin-top:-8px;">Se prorratean por los días laborables trabajados: viernes × días trabajados ÷ días laborables del año. Los festivos se configuran más abajo.</p>
       </div>
 
       <div class="panel">
@@ -629,14 +576,13 @@
 
       <div class="panel">
         <h2>Ausencias</h2>
-        <p class="sub">Bajas médicas, nacimiento y cuidado del menor u otras ausencias largas. Cada día laborable de ausencia resta lo mismo, sea cual sea la época del año. Si la baja sigue abierta, deja la fecha de fin vacía (cuenta hasta el 31 de dic.) y actualízala al alta. Las vacaciones de arriba no cambian por una ausencia.</p>
+        <p class="sub">Bajas médicas, nacimiento y cuidado del menor u otras ausencias largas. Cada día laborable de ausencia resta lo mismo, sea cual sea la época del año. Si la baja sigue abierta, deja la fecha de fin vacía (cuenta hasta el 31 de dic.) y actualízala al alta.</p>
         <div id="absList"></div>
         <button type="button" class="abs-add" id="absAddBtn">+ Añadir ausencia</button>
         <div class="field" style="margin-top:16px;">
           <label for="viernesDisfrutados">Viernes ya disfrutados este año (opcional)</label>
           <input type="number" id="viernesDisfrutados" min="0" step="1" placeholder="—">
         </div>
-        <p class="sub" style="margin-top:-8px;">Cumpleaños y día extra se descuentan siempre, aunque caigan durante la ausencia.</p>
       </div>
 
       <div class="panel">
@@ -805,11 +751,6 @@ function applyFestivosForYear(year){
 
 let ausencias = [];
 let jornadaTipo = 'completa';
-let vacManual = false, vacFechaPrev = '';
-document.getElementById('vacDias').addEventListener('input', ()=>{ vacManual = true; });
-document.getElementById('vacHint').addEventListener('click', e=>{
-  if(e.target.id === 'vacAutoBtn'){ vacManual = false; compute(); }
-});
 
 const TIPOS_AUSENCIA = [
   'Baja médica (IT)',
@@ -897,9 +838,6 @@ function loadYearPreset(year){
   });
 
   document.getElementById('fechaIncorporacion').value = `${year}-09-07`;
-  document.getElementById('veranoIni').value = `${year}-06-15`;
-  document.getElementById('veranoFin').value = `${year}-09-15`;
-
   applyFestivosForYear(year);
   compute();
 }
@@ -950,6 +888,11 @@ function ausenciaCubre(iso, ausencias){
   return ausencias.some(a => a.desde && !a.cuenta && iso >= a.desde && (!a.hasta || iso <= a.hasta));
 }
 
+// Calendario de referencia (solo para el calendario mostrado): jornada de verano fija del 15 jun al 15 sep.
+function paramsFor(year){
+  return {hLJ:8.5, hVie:6.5, hVerano:7.5, veranoIni:`${year}-06-15`, veranoFin:`${year}-09-15`, medioDiaOn:true};
+}
+
 function buildYearSchedule(year, params, ausencias = []){
   const days = [];
   const start = new Date(year,0,1);
@@ -986,64 +929,27 @@ function compute(){
 
   if(year !== festivosYear){
     applyFestivosForYear(year);
-    // Jornada de verano: fija del 15 de junio al 15 de septiembre todos los años, hasta nueva orden.
-    document.getElementById('veranoIni').value = `${year}-06-15`;
-    document.getElementById('veranoFin').value = `${year}-09-15`;
   }
   currentYear = year;
   document.getElementById('yearToggle').querySelectorAll('button').forEach(b=>{
     b.classList.toggle('active', Number(b.dataset.year)===year);
   });
 
-  const params = {
-    hLJ: Number(document.getElementById('hLJ').value),
-    hVie: Number(document.getElementById('hVie').value),
-    hVerano: Number(document.getElementById('hVerano').value),
-    veranoIni: document.getElementById('veranoIni').value,
-    veranoFin: document.getElementById('veranoFin').value,
-    medioDiaOn: document.getElementById('medioDiaOn').checked,
-  };
-
-  // Vacaciones proporcionales automáticas: 22 días × días naturales restantes ÷ días del año.
-  // Se recalculan al cambiar la fecha; si se edita a mano se respeta hasta que cambie la fecha.
-  if(fechaInc !== vacFechaPrev){ vacManual = false; vacFechaPrev = fechaInc; }
-  const diasAnio = (year%4===0 && (year%100!==0 || year%400===0)) ? 366 : 365;
-  const diasRestantes = Math.round((new Date(year,11,31) - parseISO(fechaInc))/86400000) + 1;
-  const vacAuto = Math.round(22 * diasRestantes / diasAnio);
-  if(!vacManual) document.getElementById('vacDias').value = vacAuto;
-  document.getElementById('vacHint').innerHTML = vacManual
-    ? `Manual (automático: ${vacAuto}). <button type="button" class="linkbtn" id="vacAutoBtn">Volver a automático</button>`
-    : `Automático: 22 días × ${diasRestantes}/${diasAnio} días naturales. Si usas la cifra de Factorial, réstale el día extra.`;
-  const vacDias = Math.round(Number(document.getElementById('vacDias').value)||0);
-  const diaExtraDias = document.getElementById('diaExtraOn').checked ? (Number(document.getElementById('diaExtraDias').value)||0) : 0;
-  const cumpleDias = document.getElementById('cumpleOn').checked ? (Number(document.getElementById('cumpleDias').value)||0) : 0;
+  const params = paramsFor(year);
   const viernesObjetivoAnual = Number(document.getElementById('viernesObjetivoAnual').value)||15;
+  const vObj = fmtNum(viernesObjetivoAnual, Number.isInteger(viernesObjetivoAnual) ? 0 : 1);
 
-  // Precepto: año completo = viernesObjetivoAnual viernes libres, siempre.
-  // La SAH objetivo (h/semana) se recalcula para el año en curso según cómo caigan sus festivos.
-  const objetivo = calibrateObjetivo(year, params, viernesObjetivoAnual);
-  document.getElementById('objetivoDisplay').value = `${fmtNum(objetivo,2)} h/semana (${year})`;
-
-  const schedule = buildYearSchedule(year, params, ausencias);  // con ausencias: solo calendario y recuento
-  const periodo = buildYearSchedule(year, params).filter(d => d.iso >= fechaInc);  // base sin ausencias
-
-  const sahBrutasHoras = periodo.reduce((acc,d)=> acc + (d.hours||0), 0);
-  const diasHabiles = periodo.filter(d=> d.hours!==null).length;
-  const diasAusencia = schedule.filter(d => d.iso >= fechaInc && d.absentDay).length;
-  // Cada día laborable de ausencia resta lo mismo, sea cual sea la época del año.
-  const fraccionTrabajo = diasHabiles > 0 ? (diasHabiles - diasAusencia) / diasHabiles : 1;
-
-  const horasVacaciones = vacDias*8;
-  const horasExtra = diaExtraDias*8;
-  const horasCumple = cumpleDias*8;
-
-  const diasNetos = diasHabiles - vacDias;
-  const semanasNetas = diasNetos/5;
-  const sahNetasObjetivo = semanasNetas*objetivo;
-
-  const horasExcedente = sahBrutasHoras - horasVacaciones - horasCumple - horasExtra - sahNetasObjetivo;
-  const viernesBase = params.hVie>0 ? horasExcedente/params.hVie : 0;
-  const viernesRaw = viernesBase * fraccionTrabajo;
+  // Prorrata: viernes = viernes de un año completo × días laborables trabajados ÷ días laborables del año.
+  // Incorporaciones, bajas y demás ausencias restan lo mismo por día, sea cual sea la época del año.
+  const diasAnio = buildYearSchedule(year, params).filter(d => d.hours!==null).length;
+  const schedule = buildYearSchedule(year, params, ausencias);   // con ausencias: calendario y recuento
+  const periodo = schedule.filter(d => d.iso >= fechaInc);
+  const diasDesdeAlta = periodo.filter(d => d.hours!==null || d.absentDay).length;
+  const diasAusencia = periodo.filter(d => d.absentDay).length;
+  const diasTrabajados = diasDesdeAlta - diasAusencia;
+  const diasPrevios = diasAnio - diasDesdeAlta;
+  const fraccion = diasAnio > 0 ? diasTrabajados / diasAnio : 0;
+  const viernesRaw = viernesObjetivoAnual * fraccion;
   const viernesRounded = Math.max(0, Math.ceil(preciseRound(viernesRaw,1) - 0.5)); // x,5 → baja; x,6 → sube
 
   document.getElementById('resultFridays').textContent = fmtNum(viernesRounded,0);
@@ -1073,28 +979,17 @@ function compute(){
     saldoHtml = `<br>disfrutados: <b>${fmtNum(disfrutados,0)}</b> · saldo: <b>${fmtNum(saldo,0)}</b>` +
       (saldo < 0 ? '<br>saldo negativo: lo asume la empresa, no se regulariza' : '');
   }
-  document.getElementById('resultRaw').innerHTML = `cálculo exacto: <b>${fmtNum(viernesRaw,1)}</b> viernes<br>(${fmtNum(horasExcedente,1)} h de exceso ÷ ${fmtNum(params.hVie,2)} h${diasAusencia > 0 ? ` = ${fmtNum(viernesBase,1)}, × ${fmtNum(fraccionTrabajo*100,0)}% por ausencias` : ''})` + parcialHtml + saldoHtml;
+  document.getElementById('resultRaw').innerHTML = `cálculo exacto: <b>${fmtNum(viernesRaw,1)}</b> viernes<br>(${vObj} × ${diasTrabajados} de ${diasAnio} días laborables)` + parcialHtml + saldoHtml;
 
-  const warnBox = document.getElementById('warnBox');
-  if(viernesRaw < 0){
-    warnBox.style.display='block';
-    warnBox.textContent = 'El resultado sale negativo: con estos parámetros la persona no llegaría a generar viernes libres en lo que resta de año.';
-  } else {
-    warnBox.style.display='none';
-  }
+  document.getElementById('warnBox').style.display = 'none';
 
   const rows = [
-    ['add','SAH brutas (horas de calendario desde la incorporación)', fmtNum(sahBrutasHoras,1)+' h'],
-    ['sub',`${diasHabiles} días hábiles en el periodo`, ''],
-    ...(diasAusencia > 0 ? [['sub',`${diasAusencia} días laborables de ausencia (se aplican al final, en proporción)`, '']] : []),
-    ['op','Vacaciones proporcionales', fmtNum(horasVacaciones,1)+' h'],
-    ['sub',`${fmtNum(vacDias,0)} días`, ''],
-    ['op','Día extra empresa', fmtNum(horasExtra,1)+' h'],
-    ['op','Cumpleaños', fmtNum(horasCumple,1)+' h'],
-    ['op',`SAH netas objetivo (semanas × ${fmtNum(objetivo,2)} h calibradas)`, fmtNum(sahNetasObjetivo,1)+' h'],
-    ['sub',`${fmtNum(diasNetos,1)} días netos ÷ 5 = ${fmtNum(semanasNetas,2)} semanas × ${fmtNum(objetivo,2)} h`, ''],
-    ['total','Horas de exceso a convertir en viernes', fmtNum(horasExcedente,1)+' h'],
-    ...(diasAusencia > 0 ? [['sub',`${fmtNum(viernesBase,1)} viernes × ${fmtNum(fraccionTrabajo*100,1)}% (${diasHabiles - diasAusencia} de ${diasHabiles} días laborables trabajados)`, ''], ['total','Viernes tras ausencias', fmtNum(viernesRaw,1)]] : []),
+    ['add','Días laborables del año completo', `${diasAnio} d`],
+    ...(diasPrevios > 0 ? [['op',`Antes de la incorporación (${fechaInc.split('-').reverse().join('/')})`, `${diasPrevios} d`]] : []),
+    ...(diasAusencia > 0 ? [['op','Ausencias', `${diasAusencia} d`]] : []),
+    ['total','Días laborables trabajados', `${diasTrabajados} d`],
+    ['sub',`${fmtNum(fraccion*100,1)}% del año completo`, ''],
+    ['total',`Viernes: ${vObj} × ${fmtNum(fraccion*100,1)}%`, fmtNum(viernesRaw,1)],
     ...parcialRows,
   ];
   const ledger = document.getElementById('ledger');
@@ -1109,14 +1004,14 @@ function renderCalendar(schedule, fechaInc, year){
 
   for(let m=0; m<12; m++){
     const monthDays = schedule.filter(d => parseISO(d.iso).getMonth()===m);
-    const hrsSum = monthDays.reduce((acc,d)=> acc + (d.iso>=fechaInc ? (d.hours||0):0), 0);
+    const diasMes = monthDays.filter(d => d.iso>=fechaInc && d.hours!==null).length;
 
     const monthEl = document.createElement('div');
     monthEl.className='cal-month';
 
     const mh = document.createElement('div');
     mh.className='mh';
-    mh.innerHTML = `<span class="mname">${MESES[m]}</span><span class="mhrs">${Math.round(hrsSum)}h</span>`;
+    mh.innerHTML = `<span class="mname">${MESES[m]}</span><span class="mhrs">${diasMes} d</span>`;
     monthEl.appendChild(mh);
 
     const dowRow = document.createElement('div');
@@ -1136,7 +1031,7 @@ function renderCalendar(schedule, fechaInc, year){
       let cls='cal-day';
       if(d.dow===0 || d.dow===6) cls+=' weekend';
       if(isHoliday(d.iso)) cls+=' holiday';
-      else if(withinSummer(d.iso, document.getElementById('veranoIni').value, document.getElementById('veranoFin').value) && d.hours!==null) cls+=' summer';
+      else if(withinSummer(d.iso, `${year}-06-15`, `${year}-09-15`) && d.hours!==null) cls+=' summer';
       if(d.iso < fechaInc) cls+=' before';
       if(d.iso === fechaInc) cls+=' incorp';
       if(d.half) cls+=' halfday';
@@ -1156,26 +1051,6 @@ function renderCalendar(schedule, fechaInc, year){
   }
 }
 
-function calibrateObjetivo(year, params, viernesObjetivoAnual){
-  const schedule = buildYearSchedule(year, params);
-  const fechaInc = `${year}-01-01`;
-  const periodo = schedule.filter(d => d.iso >= fechaInc);
-
-  const sahBrutasHoras = periodo.reduce((acc,d)=> acc + (d.hours||0), 0);
-  const diasHabiles = periodo.filter(d=> d.hours!==null).length;
-
-  const vacDiasFull = 22, diaExtraFull = 1, cumpleFull = 1; // año completo: convenio estándar
-  const horasVacaciones = vacDiasFull*8;
-  const horasExtra = diaExtraFull*8;
-  const horasCumple = cumpleFull*8;
-
-  const diasNetos = diasHabiles - vacDiasFull;
-  const semanasNetas = diasNetos/5;
-
-  const targetExcedente = viernesObjetivoAnual * params.hVie;
-  const sahNetasObjetivo = sahBrutasHoras - horasVacaciones - horasCumple - horasExtra - targetExcedente;
-  return sahNetasObjetivo / semanasNetas;
-}
 
 document.querySelectorAll('input').forEach(el=>{
   el.addEventListener('input', compute);
