@@ -8,9 +8,10 @@ Herramienta interna de Cloud District para estimar cuántos **viernes libres** c
 
 Prorrata por días laborables:
 
-> viernes = viernes de un año completo × días laborables trabajados ÷ días laborables del año
+> viernes = 15 × (días laborables trabajados − día extra − cumpleaños) ÷ (días laborables del año − día extra − cumpleaños)
 
-- **Un año completo son 15 viernes libres** (editable en la herramienta).
+- **Un año completo son 15 viernes libres.**
+- **Día extra y cumpleaños:** se descuentan siempre completos (1 día cada uno, desactivables), aunque haya alta tardía o ausencia. Con un año completo no cambian el resultado; con altas tardías o ausencias lo ajustan ligeramente.
 - **Días laborables:** de lunes a viernes, sin festivos.
 - **Incorporación a mitad de año:** no cuentan los días anteriores al alta; el cálculo llega hasta el 31 de diciembre.
 - **Bajas y otras ausencias** (baja médica, nacimiento y cuidado del menor, etc.): cada día laborable de ausencia resta lo mismo, sea cual sea la época del año. Cada ausencia tiene un interruptor «cuenta como tiempo trabajado» para las que no deban restar. Si la baja sigue abierta, se deja sin fecha de fin (cuenta hasta el 31 de diciembre) y se actualiza al alta.
