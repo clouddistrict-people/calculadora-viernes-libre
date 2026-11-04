@@ -225,6 +225,7 @@
   details[open] summary{ margin-bottom:14px; }
 
   .calibrate-btn{ display:none; }
+  .linkbtn{ background:none; border:none; padding:0; color:var(--lime); font:inherit; text-decoration:underline; cursor:pointer; }
 
   /* Results */
   .result-hero{
@@ -528,9 +529,9 @@
 
         <div class="field">
           <label for="vacDias">Días de vacaciones proporcionales</label>
-          <input type="number" id="vacDias" value="7" min="0" step="1">
+          <input type="number" id="vacDias" value="22" min="0" step="1">
         </div>
-        <p class="sub" style="margin-top:-8px;">Copia este número de Factorial; no se calcula aquí.</p>
+        <p class="sub" id="vacHint" style="margin-top:-8px;"></p>
 
         <div class="check-field">
           <input type="checkbox" id="diaExtraOn" checked>
@@ -786,6 +787,11 @@ function applyFestivosForYear(year){
 
 let ausencias = [];
 let jornadaTipo = 'completa';
+let vacManual = false, vacFechaPrev = '';
+document.getElementById('vacDias').addEventListener('input', ()=>{ vacManual = true; });
+document.getElementById('vacHint').addEventListener('click', e=>{
+  if(e.target.id === 'vacAutoBtn'){ vacManual = false; compute(); }
+});
 
 const TIPOS_AUSENCIA = [
   'Baja médica (IT)',
@@ -980,6 +986,16 @@ function compute(){
     medioDiaOn: document.getElementById('medioDiaOn').checked,
   };
 
+  // Vacaciones proporcionales automáticas: 22 días × días naturales restantes ÷ días del año.
+  // Se recalculan al cambiar la fecha; si se edita a mano se respeta hasta que cambie la fecha.
+  if(fechaInc !== vacFechaPrev){ vacManual = false; vacFechaPrev = fechaInc; }
+  const diasAnio = (year%4===0 && (year%100!==0 || year%400===0)) ? 366 : 365;
+  const diasRestantes = Math.round((new Date(year,11,31) - parseISO(fechaInc))/86400000) + 1;
+  const vacAuto = Math.round(22 * diasRestantes / diasAnio);
+  if(!vacManual) document.getElementById('vacDias').value = vacAuto;
+  document.getElementById('vacHint').innerHTML = vacManual
+    ? `Manual (automático: ${vacAuto}). <button type="button" class="linkbtn" id="vacAutoBtn">Volver a automático</button>`
+    : `Automático: 22 días × ${diasRestantes}/${diasAnio} días naturales. Si usas la cifra de Factorial, réstale el día extra.`;
   const vacDias = Math.round(Number(document.getElementById('vacDias').value)||0);
   const diaExtraDias = document.getElementById('diaExtraOn').checked ? (Number(document.getElementById('diaExtraDias').value)||0) : 0;
   const cumpleDias = document.getElementById('cumpleOn').checked ? (Number(document.getElementById('cumpleDias').value)||0) : 0;
