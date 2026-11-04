@@ -8,10 +8,10 @@ Herramienta interna de Cloud District para estimar cuántos **viernes libres** c
 
 Prorrata por días laborables:
 
-> viernes = 15 × (días laborables trabajados − vacaciones − día extra − cumpleaños) ÷ (días laborables del año − 22 − día extra − cumpleaños)
+> viernes = 15 × (días laborables trabajados − vacaciones − día extra − cumpleaños) ÷ (días laborables del año − 23 − día extra − cumpleaños)
 
 - **Un año completo son 15 viernes libres.**
-- **Vacaciones:** los 22 días de convenio de un año completo se prorratean según la fecha de incorporación (22 × días naturales restantes ÷ días del año) y se pueden editar a mano, por ejemplo con la cifra de Factorial menos el día extra. Se descuentan siempre completos, igual que el día extra y el cumpleaños, aunque haya ausencias.
+- **Vacaciones:** el marcador empieza siempre en 23 (año completo) y se resta a mano según la fecha de incorporación (por ejemplo, con la cifra de Factorial). Se descuentan completas, igual que el día extra y el cumpleaños, aunque haya ausencias. Si los 23 días ya incluyen el día extra, se desmarca su casilla.
 - **Día extra y cumpleaños:** se descuentan siempre completos (1 día cada uno, desactivables), aunque haya alta tardía o ausencia. Con un año completo no cambian el resultado; con altas tardías o ausencias lo ajustan ligeramente.
 - **Días laborables:** de lunes a viernes, sin festivos.
 - **Incorporación a mitad de año:** no cuentan los días anteriores al alta; el cálculo llega hasta el 31 de diciembre.
