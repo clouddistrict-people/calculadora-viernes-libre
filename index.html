@@ -515,6 +515,8 @@
   .legend .sw.holiday{ background:transparent; border:1px solid #000; }
   .legend .sw.incorp{ background:#000; border:1px solid #000; }
   .legend .sw.absent{ background:repeating-linear-gradient(45deg,#C9C9C4 0 2px,transparent 2px 5px); border:1px solid #BDBDB6; }
+  .abs-hint{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:#55554F; margin-top:6px; }
+  .abs-hint:empty{ display:none; }
 </style>
 </head>
 <body>
@@ -540,7 +542,7 @@
         <div class="field">
           <label for="fechaIncorporacion">Fecha de incorporación</label>
           <div class="date-with-today">
-            <input type="date" id="fechaIncorporacion" value="2026-09-07">
+            <input type="date" id="fechaIncorporacion" value="2026-01-01">
             <button type="button" id="todayBtn">Hoy</button>
           </div>
         </div>
@@ -791,6 +793,7 @@ function renderAusencias(){
         <input type="date" data-i="${i}" data-k="desde" value="${a.desde}" aria-label="Desde">
         <input type="date" data-i="${i}" data-k="hasta" value="${a.hasta}" aria-label="Hasta">
       </div>
+      <div class="abs-hint">${(a.desde && !a.hasta) ? 'Sin fecha de fin: cuenta hasta el 31 de diciembre.' : ''}</div>
       <label class="abs-count" style="text-transform:none; letter-spacing:0; margin-bottom:0;">
         <input type="checkbox" data-i="${i}" data-k="cuenta"${a.cuenta?' checked':''}>
         Cuenta como tiempo trabajado (no resta)
@@ -803,6 +806,13 @@ function renderAusencias(){
       const a = ausencias[Number(el.dataset.i)];
       const k = el.dataset.k;
       a[k] = (k==='cuenta') ? el.checked : el.value;
+      const row = el.closest('.abs-row');
+      // si "desde" queda después de "hasta", la fecha de fin acompaña a la de inicio (ausencia de un día)
+      if(k === 'desde' && a.desde && a.hasta && a.hasta < a.desde){
+        a.hasta = a.desde;
+        row.querySelector('[data-k="hasta"]').value = a.hasta;
+      }
+      row.querySelector('.abs-hint').textContent = (a.desde && !a.hasta) ? 'Sin fecha de fin: cuenta hasta el 31 de diciembre.' : '';
       compute();
     };
     el.addEventListener('input', handler);
@@ -818,7 +828,9 @@ function renderAusencias(){
 }
 
 document.getElementById('absAddBtn').addEventListener('click', ()=>{
-  ausencias.push({tipo:TIPOS_AUSENCIA[0], desde:'', hasta:'', cuenta:false});
+  // por defecto, el calendario de la ausencia se abre a principios de año (1 de enero, festivo: no resta nada)
+  const anio = Number(document.getElementById('fechaIncorporacion').value.slice(0,4)) || new Date().getFullYear();
+  ausencias.push({tipo:TIPOS_AUSENCIA[0], desde:`${anio}-01-01`, hasta:`${anio}-01-01`, cuenta:false});
   renderAusencias();
 });
 
@@ -853,7 +865,7 @@ function loadYearPreset(year){
     b.classList.toggle('active', Number(b.dataset.year)===year);
   });
 
-  document.getElementById('fechaIncorporacion').value = `${year}-09-07`;
+  document.getElementById('fechaIncorporacion').value = `${year}-01-01`;
   applyFestivosForYear(year);
   compute();
 }
@@ -1091,12 +1103,12 @@ function renderCalendar(schedule, fechaInc, year){
 }
 
 
-document.querySelectorAll('input').forEach(el=>{
-  el.addEventListener('input', compute);
-  el.addEventListener('change', compute);
-});
+// Un único listener general: cualquier campo (también los que se crean después) recalcula al instante.
+['input','change'].forEach(tipo => document.addEventListener(tipo, e => {
+  if(e.target.matches && e.target.matches('input, select')) compute();
+}));
 
-loadYearPreset(2026);
+loadYearPreset(Math.max(2026, new Date().getFullYear()));
 </script>
 </body>
 </html>
