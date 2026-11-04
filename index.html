@@ -545,11 +545,17 @@
           </div>
         </div>
 
-        <div class="field">
-          <label for="viernesObjetivoAnual">Viernes libres de un año completo</label>
-          <input type="number" id="viernesObjetivoAnual" value="15" min="0" step="1">
+        <div class="check-field">
+          <input type="checkbox" id="diaExtraOn" checked>
+          <span class="clabel">Día extra de la empresa</span>
+          <input type="number" id="diaExtraDias" value="1" min="0" step="0.5">
         </div>
-        <p class="sub" style="margin-top:-8px;">Se prorratean por los días laborables trabajados: viernes × días trabajados ÷ días laborables del año. Los festivos se configuran más abajo.</p>
+        <div class="check-field">
+          <input type="checkbox" id="cumpleOn" checked>
+          <span class="clabel">Día de cumpleaños</span>
+          <input type="number" id="cumpleDias" value="1" min="0" step="0.5">
+        </div>
+        <p class="sub">Se descuentan siempre completos, aunque haya alta tardía o ausencia: viernes = 15 × (días trabajados − estos días) ÷ (días laborables del año − estos días). Los festivos se configuran más abajo.</p>
       </div>
 
       <div class="panel">
@@ -936,7 +942,11 @@ function compute(){
   });
 
   const params = paramsFor(year);
-  const viernesObjetivoAnual = Number(document.getElementById('viernesObjetivoAnual').value)||15;
+  const viernesObjetivoAnual = 15;  // precepto de la empresa: 15 viernes libres con año completo
+  const diaExtraDias = document.getElementById('diaExtraOn').checked ? (Number(document.getElementById('diaExtraDias').value)||0) : 0;
+  const cumpleDias = document.getElementById('cumpleOn').checked ? (Number(document.getElementById('cumpleDias').value)||0) : 0;
+  const diasFijos = diaExtraDias + cumpleDias;  // se descuentan siempre completos
+  const fd = x => fmtNum(x, Number.isInteger(x) ? 0 : 1);
   const vObj = fmtNum(viernesObjetivoAnual, Number.isInteger(viernesObjetivoAnual) ? 0 : 1);
 
   // Prorrata: viernes = viernes de un año completo × días laborables trabajados ÷ días laborables del año.
@@ -948,7 +958,9 @@ function compute(){
   const diasAusencia = periodo.filter(d => d.absentDay).length;
   const diasTrabajados = diasDesdeAlta - diasAusencia;
   const diasPrevios = diasAnio - diasDesdeAlta;
-  const fraccion = diasAnio > 0 ? diasTrabajados / diasAnio : 0;
+  const diasNetosAnio = diasAnio - diasFijos;
+  const diasNetosTrab = Math.max(0, diasTrabajados - diasFijos);
+  const fraccion = diasNetosAnio > 0 ? diasNetosTrab / diasNetosAnio : 0;
   const viernesRaw = viernesObjetivoAnual * fraccion;
   const viernesRounded = Math.max(0, Math.ceil(preciseRound(viernesRaw,1) - 0.5)); // x,5 → baja; x,6 → sube
 
@@ -979,16 +991,19 @@ function compute(){
     saldoHtml = `<br>disfrutados: <b>${fmtNum(disfrutados,0)}</b> · saldo: <b>${fmtNum(saldo,0)}</b>` +
       (saldo < 0 ? '<br>saldo negativo: lo asume la empresa, no se regulariza' : '');
   }
-  document.getElementById('resultRaw').innerHTML = `cálculo exacto: <b>${fmtNum(viernesRaw,1)}</b> viernes<br>(${vObj} × ${diasTrabajados} de ${diasAnio} días laborables)` + parcialHtml + saldoHtml;
+  document.getElementById('resultRaw').innerHTML = `cálculo exacto: <b>${fmtNum(viernesRaw,1)}</b> viernes<br>(${vObj} × ${fd(diasNetosTrab)} de ${fd(diasNetosAnio)} días laborables netos)` + parcialHtml + saldoHtml;
 
   document.getElementById('warnBox').style.display = 'none';
 
   const rows = [
     ['add','Días laborables del año completo', `${diasAnio} d`],
-    ...(diasPrevios > 0 ? [['op',`Antes de la incorporación (${fechaInc.split('-').reverse().join('/')})`, `${diasPrevios} d`]] : []),
+    ...(diasFijos > 0 ? [['op','Día extra y cumpleaños', `${fd(diasFijos)} d`]] : []),
+    ['total','Año completo neto', `${fd(diasNetosAnio)} d`],
+    ['add',`Días laborables desde la incorporación (${fechaInc.split('-').reverse().join('/')})`, `${diasDesdeAlta} d`],
     ...(diasAusencia > 0 ? [['op','Ausencias', `${diasAusencia} d`]] : []),
-    ['total','Días laborables trabajados', `${diasTrabajados} d`],
-    ['sub',`${fmtNum(fraccion*100,1)}% del año completo`, ''],
+    ...(diasFijos > 0 ? [['op','Día extra y cumpleaños (siempre completos)', `${fd(diasFijos)} d`]] : []),
+    ['total','Días trabajados netos', `${fd(diasNetosTrab)} d`],
+    ['sub',`${fmtNum(fraccion*100,1)}% del año completo neto`, ''],
     ['total',`Viernes: ${vObj} × ${fmtNum(fraccion*100,1)}%`, fmtNum(viernesRaw,1)],
     ...parcialRows,
   ];
